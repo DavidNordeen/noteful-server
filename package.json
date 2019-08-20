@@ -3,19 +3,28 @@
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
-    "scripts": {
-      "test": "mocha --require test/setup.js",
-      "dev": "nodemon src/server.js",
-      "migrate": "postgrator --config postgrator-config.js",
-      "migrate-production": "postgrator --config postgrator-production-config.js",
-      "start": "node src/server.js",
-      "predeploy": "npm audit && npm run migrate-production",
-      "deploy": "git push heroku master"
-    },
+  "scripts": {
+    "test": "mocha --require test/setup.js",
+    "dev": "nodemon src/server.js",
+    "migrate": "postgrator --config postgrator-config.js",
+    "migrate-production": "postgrator --config postgrator-production-config.js",
+    "start": "node src/server.js",
+    "predeploy": "npm audit && npm run migrate-production",
+    "deploy": "git push heroku master"
+  },
   "author": "Thomas `tomatao` Hudspith-Tatham <iammotivated@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^8.0.0",
+    "express": "^4.17.1",
     "faker": "^4.1.0",
-    "json-server": "^0.14.0"
+    "helmet": "^3.20.0",
+    "json-server": "^0.14.0",
+    "knex": "^0.19.1",
+    "mocha": "^6.2.0",
+    "morgan": "^1.9.1",
+    "pg": "^7.12.1",
+    "xss": "^1.0.6"
   }
 }

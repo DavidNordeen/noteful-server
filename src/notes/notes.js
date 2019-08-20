@@ -1,117 +1,72 @@
+
+'use strict';
+
+const path = require('path');
 const express = require('express');
-const uuid = require('uuid/v4');
-const logger = require('../logger');
+const NotesService = require('./notes-service');
 const notesRouter = express.Router();
-const bodyParser = express.json();
-const NotesService = require('./notes-service')
-
-const serializeNote = note => ({
-  id: note.id,
-  folderId: note.folderId,
-  description: note.description,
-  content: Number(note.content),
-})
+const jsonParser = express.json();
+const { sanitizeFields } = require('../utils');
 
 notesRouter
-  .route('/api/notes')
+  .route('/')
+  .get(async (req, res, next) => {
+    const db = req.app.get('db');
+    try {
+      const notes = await NotesService.list(db);
+      res.json(notes);
+    } catch (err) {
+      next(err);
+    }
+  })
+  .post(jsonParser, async (req, res, next) => {
+    const db = req.app.get('db');
+    const { name, content, folder_id } = req.body;
+    let newNote = { name, content, folder_id };
+
+    for (const [key, value] of Object.entries(newNote)) {
+      if (value === null) {
+        return next({ status: 400, message: `Missing '${key}' in request body` });
+      }
+    }
+
+    newNote = sanitizeFields(newNote);
+    try {
+      const note = await NotesService.insert(db, newNote);
+      res
+        .status(201)
+        .location(path.posix.join(req.originalUrl, `/${note.id}`))
+        .json(note);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+notesRouter
+  .route('/:note_id')
+  .all(async (req, res, next) => {
+    try {
+      const note = await NotesService.findById(req.app.get('db'), req.params.note_id);
+      if (!note) {
+        return next({ status: 404, message: 'Note doesn\'t exist' });
+      }
+      res.note = note;
+      next();
+    } catch (err) {
+      next(err);
+    }
+  })
   .get((req, res, next) => {
-    const knexInstance = req.app.get('db')
-
-    NotesService.getAllNotes(knexInstance)
-      .then(notes => {
-        res.json(notes.map(note => ({
-          id: note.id,
-          folderId: note.folderId,
-          content: note.content,
-          modified: note.modified,
-
-        })))
-      })
-      .catch(next)
-
+    res.json(res.note);
   })
-  .post(bodyParser, (req, res, next) => {
-
-    const { folderId, content, modified } = req.body;
-    const parsedContent = parseInt(content);
-
-    if (!folderId) {
-      logger.error('folderId is required')
-      return res
-        .status(400)
-        .send('Invalid Data');
+  .delete(async (req, res, next) => {
+    try {
+      await NotesService.delete(req.app.get('db'), req.params.note_id);
+      res.status(200).json({});
+    } catch (err) {
+      next(err);
     }
-    if (!content) {
-      logger.error('content is required')
-      return res
-        .status(400)
-        .send('Invalid Data');
-    }
-
-    const insertNote = {
-      folderId: folderId,
-      content: content,
-      modified: now()
-    }
-
-    const knexInstance = req.app.get('db')
-
-    NotesService.insertNote(knexInstance, insertNote)
-      .then(returnObject => {
-        return res.json(returnObject)
-      })
-      .catch(next)
-  })
-
-notesRouter
-  .route('/api/notes/:id')
-  .get((req, res, next) => {
-    const { id } = req.params;
-    const parseId = parseInt(id);
-
-    const knexInstance = req.app.get('db')
-
-    NotesService.getNoteById(knexInstance, id)
-      .then(returnObject => {
-        return res.json(serializeNote(returnObject))
-      })
-      .catch(next)
-
-  })
-  .delete((req, res, next) => {
-    const { id } = req.params;
-    const knexInstance = req.app.get('db')
-
-    NotesService.deleteNote(knexInstance, id)
-      .then(returnObject => {
-        return res.json(serializeNote(returnObject))
-      })
-      .catch(next)
-  })
-
-notesRouter
-  .route('/api/notes/:id')
-  .patch(bodyParser, (req, res, next) => {
-    console.log(req.body)
-    const { id, folderId, content, description } = req.body;
-    const parsedContent = parseInt(content);
-    const parseId = parseInt(id);
-    const knexInstance = req.app.get('db');
-
-    const patchNote = {
-      folderId: folderId,
-      content: content,
-      modified: now()
-    }
-
-    NotesService.patchNote(knexInstance, patchNote)
-      .then(returnObject => {
-        return res.json(returnObject)
-      })
-      .catch(next)
-
-  })
-
+  });
 
 
 module.exports = notesRouter;

@@ -1,26 +1,20 @@
-const FoldersService = {
-    getAllNotes(knex) {
-        found = knex.select('*').from('notes');
-        return found
-    },
-    insertNote(knex, insertNote) {
-        return knex.insert(insertNote).into('notes');
-    },
-    patchNote(knex, patchNote) {
-        return knex('notes').where('id', patchNote.id).update(patchNote);
-    },
-    deleteNote(knex, id){
-        return knex('notes')
-        .where('id', id)
-        .del()
-    },
-    updateNote(knex, insertNote){
+'use strict';
 
-    },
-    getNoteById(knex, id) {
-       const found = knex.from('notes').select('*').where('id', id).first()
-       return found
-    }
+const FoldersService = {
+  list(knex) {
+    return knex('folders').select('*');
+  },
+
+  findById(knex, id) {
+    return knex('folders').where({id}).first('*');
+  },
+
+  insert(knex, folder) {
+    return knex('folders')
+      .insert(folder)
+      .returning('*')
+      .then(rows => rows[0]);
   }
+};
 
 module.exports = FoldersService;

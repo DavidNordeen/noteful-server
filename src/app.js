@@ -7,7 +7,7 @@ const helmet = require('helmet');
 const { NODE_ENV } = require('./config');
 
 const notesRouter = require('./notes/notes');
-const folderRouter = require('./folders/folder');
+const folderRouter = require('./folders/folders');
 const app = express();
 
 const morganOption = (NODE_ENV === 'production')
