@@ -1,29 +1,33 @@
 'use strict';
 const NotesService = {
-  list(knex) {
-    return knex('notes').select('*');
-  },
   getAllNotes(knex) {
-    const found = knex.select('*').from('notes');
-    return found;
+    return knex.select('*').from('notes');
   },
-  insertNote(knex, insertNote) {
-    return knex.insert(insertNote).into('notes');
+  insertNote(knex, newNote) {
+    return knex
+      .insert(newNote)
+      .into('notes')
+      .returning('*')
+      .then(rows => {
+        return rows[0];
+      });
   },
-  patchNote(knex, patchNote) {
-    return knex('notes').where('id', patchNote.id).update(patchNote);
+  getById(knex, id) {
+    return knex
+      .from('notes')
+      .select('*')
+      .where({ id })
+      .first();
   },
   deleteNote(knex, id) {
     return knex('notes')
-      .where('id', id)
+      .where({ id })
       .del();
   },
-  updateNote(knex, insertNote) {
-
-  },
-  getNoteById(knex, id) {
-    const found = knex.from('notes').select('*').where('id', id).first();
-    return found;
+  updateNote(knex, id, newNoteInput) {
+    return knex('notes')
+      .where({ id })
+      .update(newNoteInput);
   }
 };
 

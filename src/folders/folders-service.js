@@ -2,7 +2,7 @@
 
 const FoldersService = {
   getAllFolders(knex) {
-    return knex.select('*').from('folders')
+    return knex.select('*').from('folders');
   },
   insertFolder(knex, newFolder) {
     return knex
@@ -10,26 +10,26 @@ const FoldersService = {
       .into('folders')
       .returning('*')
       .then(rows => {
-        return rows[0]
-      })
+        return rows[0];
+      });
   },
   getById(knex, id) {
     return knex
       .from('folders')
       .select('*')
       .where({ id })
-      .first()
+      .first();
   },
   deleteFolder(knex, id) {
     return knex('folders')
       .where({ id })
-      .del()
+      .del();
   },
   updateFolder(knex, id, newFolderInput) {
     return knex('folders')
       .where({ id })
-      .update(newFolderInput)
+      .update(newFolderInput);
   }
-}
+};
 
-module.exports = FoldersService
+module.exports = FoldersService;

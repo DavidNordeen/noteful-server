@@ -3,70 +3,105 @@
 
 const path = require('path');
 const express = require('express');
+const xss = require('xss');
 const NotesService = require('./notes-service');
+
 const notesRouter = express.Router();
 const jsonParser = express.json();
-const { sanitizeFields } = require('../utils');
+
+const serializeNote = note => ({
+  id: note.id,
+  name: xss(note.name),
+  modified: note.modified,
+  folder_id: note.folder_id,
+  content: xss(note.content)
+});
 
 notesRouter
   .route('/')
-  .get(async (req, res, next) => {
-    const db = req.app.get('db');
-    try {
-      const notes = await NotesService.list(db);
-      res.json(notes);
-    } catch (err) {
-      next(err);
-    }
+  .get((req, res, next) => {
+    const knexInstance = req.app.get('db');
+    NotesService.getAllNotes(knexInstance)
+      .then(notes => {
+        res.json(notes.map(serializeNote));
+      })
+      .catch(next);
   })
-  .post(jsonParser, async (req, res, next) => {
-    const db = req.app.get('db');
+  .post(jsonParser, (req, res, next) => {
     const { name, content, folder_id } = req.body;
-    let newNote = { name, content, folder_id };
+    const newNote = { name, content, folder_id };
 
-    for (const [key, value] of Object.entries(newNote)) {
-      if (value === null) {
-        return next({ status: 400, message: `Missing '${key}' in request body` });
-      }
-    }
+    for (const [key, value] of Object.entries(newNote))
+      if (value == null)
+        return res.status(400).json({
+          error: { message: `Missing '${key}' in request body` }
+        });
 
-    newNote = sanitizeFields(newNote);
-    try {
-      const note = await NotesService.insert(db, newNote);
-      res
-        .status(201)
-        .location(path.posix.join(req.originalUrl, `/${note.id}`))
-        .json(note);
-    } catch (err) {
-      next(err);
-    }
+    NotesService.insertNote(
+      req.app.get('db'),
+      newNote
+    )
+      .then(note => {
+        res
+          .status(201)
+          .location(path.posix.join(req.originalUrl, `/${note.id}`))
+          .json(serializeNote(note));
+      })
+      .catch(next);
   });
 
 notesRouter
   .route('/:note_id')
-  .all(async (req, res, next) => {
-    try {
-      const note = await NotesService.getNoteById(req.app.get('db'), req.params.note_id);
-      if (!note) {
-        return next({ status: 404, message: 'Note doesn\'t exist' });
-      }
-      res.note = note;
-      next();
-    } catch (err) {
-      next(err);
-    }
+  .all((req, res, next) => {
+    NotesService.getById(
+      req.app.get('db'),
+      req.params.note_id
+    )
+      .then(note => {
+        if (!note) {
+          return res.status(404).json({
+            error: { message: 'Note doesn\'t exist' }
+          });
+        }
+        res.note = note;
+        next();
+      })
+      .catch(next);
   })
   .get((req, res, next) => {
-    res.json(res.note);
+    res.json(serializenote(res.note));
   })
-  .delete(async (req, res, next) => {
-    try {
-      await NotesService.delete(req.app.get('db'), req.params.note_id);
-      res.status(200).json({});
-    } catch (err) {
-      next(err);
-    }
-  });
+  .delete((req, res, next) => {
+    NotesService.deleteNote(
+      req.app.get('db'),
+      req.params.note_id
+    )
+      .then(numRowsAffected => {
+        res.status(204).json({});
+      })
+      .catch(next);
+  })
+  .patch(jsonParser, (req, res, next) => {
+    const { name, content, folder_id } = req.body;
+    const noteToUpdate = { name, content, folder_id };
 
+    const numberOfValues = Object.values(noteToUpdate).filter(Boolean).length;
+    if (numberOfValues === 0)
+      return res.status(400).json({
+        error: {
+          message: 'Request body must content either \'fullname\', \'notename\', \'password\' or \'nickname\''
+        }
+      });
+
+    NotesService.updateNote(
+      req.app.get('db'),
+      req.params.note_id,
+      noteToUpdate
+    )
+      .then(numRowsAffected => {
+        res.status(204).end();
+      })
+      .catch(next);
+  });
 
 module.exports = notesRouter;
