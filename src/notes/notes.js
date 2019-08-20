@@ -46,7 +46,7 @@ notesRouter
   .route('/:note_id')
   .all(async (req, res, next) => {
     try {
-      const note = await NotesService.findById(req.app.get('db'), req.params.note_id);
+      const note = await NotesService.getNoteById(req.app.get('db'), req.params.note_id);
       if (!note) {
         return next({ status: 404, message: 'Note doesn\'t exist' });
       }
