@@ -1,20 +1,35 @@
 'use strict';
 
 const FoldersService = {
-  list(knex) {
-    return knex('folders').select('*');
+  getAllFolders(knex) {
+    return knex.select('*').from('folders')
   },
-
-  findById(knex, id) {
-    return knex('folders').where({id}).first('*');
-  },
-
-  insert(knex, folder) {
-    return knex('folders')
-      .insert(folder)
+  insertFolder(knex, newFolder) {
+    return knex
+      .insert(newFolder)
+      .into('folders')
       .returning('*')
-      .then(rows => rows[0]);
+      .then(rows => {
+        return rows[0]
+      })
+  },
+  getById(knex, id) {
+    return knex
+      .from('folders')
+      .select('*')
+      .where({ id })
+      .first()
+  },
+  deleteFolder(knex, id) {
+    return knex('folders')
+      .where({ id })
+      .del()
+  },
+  updateFolder(knex, id, newFolderInput) {
+    return knex('folders')
+      .where({ id })
+      .update(newFolderInput)
   }
-};
+}
 
-module.exports = FoldersService;
+module.exports = FoldersService
