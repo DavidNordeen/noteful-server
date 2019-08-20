@@ -1,5 +1,8 @@
 'use strict';
 const NotesService = {
+  list(knex) {
+    return knex('notes').select('*');
+  },
   getAllNotes(knex) {
     const found = knex.select('*').from('notes');
     return found;
